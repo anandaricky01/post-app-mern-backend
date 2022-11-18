@@ -8,13 +8,15 @@ export const register = async (req, res) => {
         name : req.body.name,
         email : req.body.email,
         gender : req.body.gender,
-        password : password
+        password : password,
+        username : req.body.username
     });
     try {
         const createdUser = await user.save();
         const token = generateAccessToken({
             name : req.body.name,
             email : req.body.email,
+            username : req.body.username 
         });
 
         return res.status(201).json({
@@ -40,6 +42,7 @@ export const login = async (req, res) => {
         const payload = {
             name : checkUser.name,
             email : checkUser.email,
+            username : checkUser.username
         };
         
         const token = generateAccessToken(payload);
@@ -48,7 +51,4 @@ export const login = async (req, res) => {
     } catch (error) {
         return res.status(400).json({message : error.message});
     }
-
-
-
 }
