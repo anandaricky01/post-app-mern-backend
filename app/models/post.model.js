@@ -32,17 +32,6 @@ const Post = mongoose.Schema(
         type : Number,
         default : 0
       },
-    },
-    comment : {
-      commentBy : {
-        type : String,
-      },
-      body : {
-        type : String
-      },
-      dateComment : {
-        type : Date
-      }
     }
   },
   { timestamps: true }

@@ -1,4 +1,5 @@
 import Post from "../models/post.model.js";
+import Comment from "../models/comment.model.js";
 
 export const findAll = async (req, res) => {
   try {
@@ -43,8 +44,12 @@ export const createPost = async (req, res) => {
 export const findOnePost = async (req, res) => {
   try {
     const findPost = await Post.findOne({ _id: req.params.id });
+    const Comments = await Comment.find({ post_id: req.params.id });
 
-    return res.json({ message: "Post by ID", data: findPost });
+    return res.json({
+      message: "Post by ID",
+      data: { post: findPost, comments: Comments },
+    });
   } catch (error) {
     return res.status(422).json({ message: error.message });
   }
@@ -81,8 +86,9 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const deletePost = await Post.deleteOne({ _id: req.params.id });
+    const deleteComment = await Comment.deleteMany({post_id : req.params.id});
 
-    res.json({ message: "Post has been deleted!", data: deletePost });
+    res.json({ message: "Post has been deleted!", data: {deletePost, deleteComment} });
   } catch (error) {
     return res.status(422).json({ message: error.message });
   }
@@ -117,3 +123,27 @@ export const downVote = async (req, res) => {
     return res.status(422).json({ message: error.message });
   }
 };
+
+export const createComment = async (req, res) => {
+  req.body.author = req.user.username;
+  req.body.post_id = req.params.id;
+  const comment = new Comment(req.body);
+  try {
+    const createdComment = await comment.save();
+    return res.status(201).json({
+      message: `Comment has been created on post by id : ${req.params.id}`,
+      createdComment,
+    });
+  } catch (error) {
+    return res.status(422).json({ message: error.message });
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    const deletedComment = await Comment.deleteOne({post_id : req.params.id});
+    return res.status(202).json({message : "Comment has been deleted!", data : deletedComment});
+  } catch (error) {
+    return res.status(422).json({message : error.message});
+  }
+}
