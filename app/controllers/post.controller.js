@@ -1,5 +1,6 @@
 import Post from "../models/post.model.js";
 import Comment from "../models/comment.model.js";
+import Vote from "../models/vote.model.js";
 
 export const findAll = async (req, res) => {
   try {
@@ -45,10 +46,16 @@ export const findOnePost = async (req, res) => {
   try {
     const findPost = await Post.findOne({ _id: req.params.id });
     const Comments = await Comment.find({ post_id: req.params.id });
+    const upVotes = await Vote.find({ post_id: req.params.id, vote: true });
+    const downVotes = await Vote.find({ post_id: req.params.id, vote: false });
 
     return res.json({
       message: "Post by ID",
-      data: { post: findPost, comments: Comments },
+      data: {
+        post: findPost,
+        postVote: { upVote: upVotes.length, downVote: downVotes.length },
+        comments: Comments,
+      },
     });
   } catch (error) {
     return res.status(422).json({ message: error.message });
@@ -86,41 +93,85 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const deletePost = await Post.deleteOne({ _id: req.params.id });
-    const deleteComment = await Comment.deleteMany({post_id : req.params.id});
+    const deleteComment = await Comment.deleteMany({ post_id: req.params.id });
+    const deleteVote = await Vote.deleteMany({ post_id: req.params.id });
 
-    res.json({ message: "Post has been deleted!", data: {deletePost, deleteComment} });
+    res.json({
+      message: "Post has been deleted!",
+      data: { deletePost, deleteComment, deleteVote },
+    });
   } catch (error) {
     return res.status(422).json({ message: error.message });
   }
 };
 
 export const upVote = async (req, res) => {
-  try {
-    var upVote = await Post.findOne({ _id: req.params.id });
-    upVote = upVote.vote.upVote + 1;
-    const updateUpVote = await Post.updateOne(
-      { _id: req.params.id },
-      { $set: { "vote.upVote": upVote } }
-    );
+  const checkVote = await Vote.findOne({
+    post_id: req.params.id,
+    username: req.user.username,
+  });
+  if (checkVote) {
+    if (checkVote.vote == true) {
+      return res.sendStatus(204);
+    } else {
+      return updateVote(true, req, res);
+    }
+  } else {
+    try {
+      const upVote = new Vote({
+        post_id: req.params.id,
+        username: req.user.username,
+        vote: true,
+      });
 
-    return res.json({ countUpVote: updateUpVote, postId: req.params.id });
-  } catch (error) {
-    return res.status(422).json({ message: error.message });
+      const upVoted = await upVote.save();
+
+      return res.json({ countUpVote: upVoted, postId: req.params.id });
+    } catch (error) {
+      return res.status(422).json({ message: error.message });
+    }
   }
 };
 
 export const downVote = async (req, res) => {
-  try {
-    var downVote = await Post.findOne({ _id: req.params.id });
-    downVote = downVote.vote.downVote + 1;
-    const updateDownVote = await Post.updateOne(
-      { _id: req.params.id },
-      { $set: { "vote.downVote": downVote } }
-    );
+  const checkVote = await Vote.findOne({
+    post_id: req.params.id,
+    username: req.user.username,
+  });
+  if (checkVote) {
+    if (checkVote.vote == false) {
+      return res.sendStatus(204);
+    } else {
+      return updateVote(false, req, res);
+    }
+  } else {
+    try {
+      const downVote = new Vote({
+        post_id: req.params.id,
+        username: req.user.username,
+        vote: false,
+      });
 
-    return res.json({ countUpVote: updateDownVote, postId: req.params.id });
+      const downVoted = await downVote.save();
+
+      return res.json({ countUpVote: downVoted, postId: req.params.id });
+    } catch (error) {
+      return res.status(422).json({ message: error.message });
+    }
+  }
+};
+
+const updateVote = async (vote, req, res) => {
+  try {
+    const checkVote = await Vote.findOneAndUpdate(
+      { post_id: req.params.id, username: req.user.username },
+      { $set: { vote: vote } }
+    );
+    return res
+      .status(200)
+      .json({ message: "Status vote changed!", status: vote, data: checkVote });
   } catch (error) {
-    return res.status(422).json({ message: error.message });
+    return res.status(402).json({ message: error.message });
   }
 };
 
@@ -141,9 +192,11 @@ export const createComment = async (req, res) => {
 
 export const deleteComment = async (req, res) => {
   try {
-    const deletedComment = await Comment.deleteOne({post_id : req.params.id});
-    return res.status(202).json({message : "Comment has been deleted!", data : deletedComment});
+    const deletedComment = await Comment.deleteOne({ post_id: req.params.id });
+    return res
+      .status(202)
+      .json({ message: "Comment has been deleted!", data: deletedComment });
   } catch (error) {
-    return res.status(422).json({message : error.message});
+    return res.status(422).json({ message: error.message });
   }
-}
+};

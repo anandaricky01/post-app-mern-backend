@@ -22,16 +22,6 @@ const Post = mongoose.Schema(
     author : {
         type : String,
         required : true
-    },
-    vote : {
-      upVote : {
-        type : Number,
-        default : 0
-      },
-      downVote : {
-        type : Number,
-        default : 0
-      },
     }
   },
   { timestamps: true }
